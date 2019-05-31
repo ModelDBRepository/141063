@@ -1,0 +1,35 @@
+create soma
+access soma
+soma {L = 30 diam = 30}
+insert leak
+g_leak = 2.2e-5
+e_leak = -60
+
+insert dr
+gd_dr = 0.0025
+gr_dr = 0.0028
+
+insert sdsr
+gsd_sdsr = 0.00021
+gsr_sdsr = 0.00028
+tsr_sdsr = 30
+zsd_sdsr = 0.11
+eta_sdsr = 14
+k_sdsr = 0.18
+tsr_sdsr = 35
+
+insert ih
+gbar_ih = 0.0006
+tau_ih = 125
+V0_ih = -85
+
+insert OU
+ek = -90
+ena = 50
+
+insert trek1
+gkbar_trek1 = 6e-05
+Tm_trek1 = 29
+Pmin_trek1 = 0.2
+q10_trek1 = 5
+Tm_trek1 = 29

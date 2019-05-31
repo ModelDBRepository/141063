@@ -1,0 +1,203 @@
+
+Panel=1
+Figure=1
+objref initDialog
+initDialog = new VBox(1)
+initDialog.intercept(1)
+xpanel("")
+xlabel("Type of Figure")
+xradiobutton("V traces @34, 30 and 25ºC","Panel=1",1)
+xradiobutton("6 temperature steps (ISI plot)","Panel=2")
+xradiobutton("Effect of ZD7288 (ISI plot)","Panel=3")
+xradiobutton("Effect of ZD7288 with v-trace","Panel=4")
+xpanel()
+xpanel("")
+xlabel("Select type of Ih")
+xradiobutton("wild type (HCN1, Fig. 7)","Figure=1",1)
+xradiobutton("slow Ih (HCN2, Fig. 8)","Figure=2")
+xradiobutton("slow Ih gh=0.2 (HCN2, Fig. Supp 3)","Figure=3")
+xpanel()
+initDialog.intercept(0)
+
+initDialog.dialog("Huber-Braun + Ih model")
+
+if (Figure==2) {
+   tau_ih = 900
+   V0_ih = -95
+}
+
+if (Figure==3) {
+   tau_ih = 900
+   V0_ih = -95
+   gbar_ih = 0.0002
+}
+
+tstop = 8000
+celsius = 34
+
+objref outfile, outmtx, apvec, isivec, rcelsiusvec
+outfile = new File()
+outmtx = new Matrix()
+apvec=new Vector()
+isivec=new Vector()
+rcelsiusvec=new Vector()
+
+objref timevec, tempvec, timevec2, ihvec
+timevec = new Vector()
+tempvec = new Vector()
+ihvec = new Vector()
+
+//Proc for saving action potential time and ISIs
+proc save(){
+	outmtx.resize(apvec.size,3)
+	outmtx.setcol(0,apvec)
+	outmtx.setcol(1,isivec)
+	outmtx.setcol(2,rcelsiusvec)
+
+	outfile.wopen("APdata.txt")
+	outmtx.fprint(0,outfile,"%10.2f\t")
+	outfile.close
+}
+
+objref box1, vgraph, tempgraph, isiplot, freqplot
+objref nc1,null
+
+proc apeval() {
+	rcelsiusvec.append(celsius)
+	apvec.append(t)
+	isivec.append(t-last_time)
+	isiplot.mark(t, t - last_time,"O",1)
+	last_time=t
+	
+	if (int(t/1000)>freq_time){
+		freqplot.mark(freq_time*1000, curr_freq, "O", 5)
+		freq_time = int(t/1000)
+		curr_freq=0
+	} 
+	curr_freq += 1
+}
+
+proc doit() {
+	apvec.resize(0)
+	isivec.resize(0)
+	rcelsiusvec.resize(0)
+	isiplot.erase()
+	freqplot.erase()
+	last_time=0
+	freq_time=0
+	curr_freq=0
+	run()
+}
+
+if (Panel==1||Panel==4) {
+    
+    if (Panel==1){
+        tstop = 9000
+        timevec.insrt(0,0,3000,6000,9000)
+        tempvec.insrt(0,34,30,25)
+        tempvec.play(&celsius,timevec,0)
+    } else {
+        tstop = 15000
+        celsius = 33
+        timevec.insrt(0,0,5000,10000,15000)
+        ihvec.insrt(0,1,1,0,0)
+        ihvec.mul(gbar_ih)
+        ihvec.play(&soma.gbar_ih(0.5),timevec,1)
+    }
+        
+    box1 = new VBox()
+
+    box1.intercept(1)
+    vgraph = new Graph()
+    vgraph.size(0,tstop,-90,40)
+    graphList[0].append(vgraph)
+    vgraph.addexpr("voltage","soma.v(0.5)",1,1)
+
+    if (Panel==1) {
+        tempgraph = new Graph()
+        tempgraph.size(0,tstop,20,40)
+        graphList[0].append(tempgraph)
+        tempgraph.addexpr("Temp (C)","celsius",1,1)
+    } else {
+        tempgraph = new Graph()
+        tempgraph.size(0,tstop,0,0.0006)
+        graphList[0].append(tempgraph)
+        tempgraph.addexpr("gmax ih (S/cm2)","soma.gbar_ih(0.5)",1,1)
+    }
+    
+  	xpanel("",1)
+	xbutton("Run","run()")
+	xbutton("Stop","stoprun=1")
+	xbutton("Parameters","forall {nrnsecmenu(-1,1)}")
+	xfixedvalue("temp","celsius")
+	xfixedvalue("Time","t")
+	xbutton("Quit","quit()")
+	xpanel()
+       
+    box1.intercept(0)
+    box1.map("",50,50,600,400)
+} 
+
+if (Panel==2||Panel==3){
+    tstop = 300000
+    steps_per_ms = 1
+    
+    if (Panel==2){
+        timevec.insrt(0,0,50000,100000,150000,200000,250000)
+        tempvec.insrt(0,34,32,30,28,26,24)
+        tempvec.play(&celsius,timevec,0)
+    }
+    
+    if (Panel==3){
+        celsius = 33
+        timevec.insrt(0,0,120000,180000,300000)
+        ihvec.insrt(0,1,1,0,0)
+        ihvec.mul(gbar_ih)
+        ihvec.play(&soma.gbar_ih(0.5),timevec,1)
+    }
+    
+    box1 = new VBox()
+    box1.intercept(1)
+
+    freqplot=new Graph()
+    freqplot.size(0,tstop,0,15)
+    graphList[0].append(freqplot)
+    freqplot.label("Firing rate (/s)")
+    isiplot=new Graph()
+    isiplot.size(0,tstop,0,600)
+    graphList[0].append(isiplot)
+    isiplot.label("ISI (ms)")
+    if (Panel==2) {
+      tempgraph = new Graph()
+      tempgraph.size(0,tstop,20,40)
+      graphList[0].append(tempgraph)
+      tempgraph.addexpr("Temp (C)","celsius",1,1)
+    } else {
+        tempgraph = new Graph()
+        tempgraph.size(0,tstop,0,0.0006)
+        graphList[0].append(tempgraph)
+        tempgraph.addexpr("gmax ih (S/cm2)","soma.gbar_ih(0.5)",1,1)
+    }
+    
+    xpanel("",1)
+	xbutton("Run","doit()")
+	xbutton("Stop","stoprun=1")
+	xbutton("Parameters","forall {nrnsecmenu(-1,1)}")
+	xfixedvalue("temp","celsius")
+	xfixedvalue("Time","t")
+	xbutton("Save ISI data","save()")
+	xbutton("Quit","quit()")
+	xpanel()
+       
+    box1.intercept(0)
+    box1.map("",50,50,700,400)
+    
+    last_time=0
+    freq_time=0
+    curr_freq=0
+
+    nc1 = new NetCon(&v(0.5),null)
+    nc1.threshold = -20
+    nc1.record("apeval()")
+}
+
